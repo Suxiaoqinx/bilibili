@@ -335,6 +335,7 @@ bilibili/
 - Python 3.13
 - Flask 2.x
 - Windows 10/11
+- Linux
 
 ## 许可证
 
