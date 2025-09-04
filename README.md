@@ -158,20 +158,6 @@ GET /api/video/info?url=https://www.bilibili.com/video/BV1xx411c7mD&q=auto
 }
 ```
 
-**视频流支持映射表**:
-```
-超清 8K
-杜比视界
-HDR真彩
-超清 4K
-高清 1080P60
-高清 1080P+
-高清 1080P
-高清 720P
-清晰 480P
-流畅 360P
-```
-
 #### 3. 获取视频质量选项
 
 **接口**: `GET /api/video/quality`
