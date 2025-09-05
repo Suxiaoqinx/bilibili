@@ -927,7 +927,7 @@ def select_quality_and_download(url, cookies=None, output_dir="downloads", merge
 # 示例使用
 if __name__ == "__main__":
     # 直接填写cookie字符串（请替换为你的实际cookie）
-    cookies = "testcookie=1; buvid3=F0BCFD00-8D63-767F-0142-2CA883095EDC97283infoc; b_nut=1747132297; _uuid=6B1F5A45-C104F-7F4D-7DB10-821025FD1F4DE98382infoc; buvid_fp=4af4184d070ea8a3304abcb4a4cfac24; enable_web_push=DISABLE; enable_feed_channel=ENABLE; buvid4=FADDAD23-7FAD-240B-9008-9F93DDC4ACE739867-025050818-T1CGSs8fZFjIwTJVhhNqQg%3D%3D; SESSDATA=e51893d6%2C1762684350%2C7b0ec%2A51CjDfUyNB39cnGAT4u-LdEtb_NLMeqaHvru5chIwuBPxpD13Uu-FQBDnY9CAoa4PWcJoSVmRjbi05Z2djMnhZS2czcVR3MzZVXzVoMjVaVHJYZTYtX0NDU2hnaXJ0dUtKcTJvTjlXYXBIcFdTS1ljMVZ1X0xsamk0RGtrY1JIT2ltTlZ3ZThLa1ZRIIEC; bili_jct=7de99821900bbf85004e86a58796e40e; DedeUserID=9372624; DedeUserID__ckMd5=6f6afb8c6bdb37d5; sid=64l9afgx; header_theme_version=OPEN; theme-tip-show=SHOWED; rpdid=|(um~R))l)R)0J'u~R~uJkJ)~; theme-avatar-tip-show=SHOWED; CURRENT_QUALITY=80; LIVE_BUVID=AUTO6817546823768791; theme-switch-show=SHOWED; theme_style=light; PVID=1; bp_t_offset_9372624=1108254115311386624; home_feed_column=4; browser_resolution=1172-696; CURRENT_FNVAL=4048; b_lsid=CCB7610110_199138BFACF; share_source_origin=QQ; bili_ticket=eyJhbGciOiJIUzI1NiIsImtpZCI6InMwMyIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTcyMjg3NjcsImlhdCI6MTc1Njk2OTUwNywicGx0IjotMX0.Q9kMstCGILce-KXiCvcCYMrnU8Ze0zROqVtI1Jp987s; bili_ticket_expires=1757228707; bmg_af_switch=1; bmg_src_def_domain=i2.hdslb.com; bsource=share_source_qqchat"
+    cookies = ""
     
     # 主循环
     while True:
@@ -1052,4 +1052,5 @@ if __name__ == "__main__":
                  print("获取playinfo数据失败")
         else:
              # 无效选项
+
              print("\n❌ 无效选项，请重新选择！")
