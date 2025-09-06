@@ -25,6 +25,10 @@ from bilibili import (
 app = Flask(__name__)
 CORS(app)  # 允许跨域请求
 
+# 配置JSON响应格式
+app.config['JSON_AS_ASCII'] = False  # 支持中文字符
+app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True  # 格式化JSON输出
+
 # 全局变量存储下载任务状态
 download_tasks = {}
 
@@ -65,31 +69,35 @@ def load_cookies():
 
 @app.route('/', methods=['GET'])
 def index():
-    """API首页"""
-    return jsonify({
-        'message': 'B站视频下载API服务',
-        'version': '1.0.0',
-        'endpoints': {
-            'GET /': '获取API信息',
-            'GET /api/video/info': '获取视频信息 (支持 &q=auto 参数获取全部视频和音频流)',
-            'GET /api/video/quality': '获取视频质量选项',
-            'GET /api/video/download': '下载视频',
-            'GET /api/download/status/<task_id>': '查询下载状态',
-            'GET /api/download/file/<task_id>': '下载文件'
-        }
-    })
+    """API首页 - 返回文本格式"""
+    text_result = """B站视频下载API服务
+版本: 2.0.0
 
+可用接口:
+  GET  /                           - 获取API信息
+  GET  /api/video/info             - 获取视频信息 (支持 &q=auto 参数获取全部视频和音频流)
+  GET  /api/video/quality          - 获取视频质量选项
+  GET  /api/video/download         - 下载视频
+  GET  /api/download/status/<id>   - 查询下载状态
+  GET  /api/download/file/<id>     - 下载文件
+  GET  /api/download/merge/<id>    - 合并下载视频音频
+  GET  /api/tasks                  - 获取所有任务
+
+使用说明:
+1. 所有接口均支持GET请求
+2. 参数通过URL查询字符串传递
+3. 返回数据为文本格式
+4. 服务运行在 http://localhost:5000"""
+    
+    return Response(text_result, mimetype='text/plain; charset=utf-8')
 @app.route('/api/video/info', methods=['GET'])
 def get_video_info():
-    """获取视频信息API"""
+    """获取视频信息API - 返回文本格式"""
     try:
         # 从URL参数获取视频链接
         url = request.args.get('url')
         if not url:
-            return jsonify({
-                'success': False,
-                'error': '缺少必要参数: url'
-            }), 400
+            return Response('错误: 缺少必要参数 url', mimetype='text/plain; charset=utf-8', status=400)
         
         # 获取q参数，用于控制返回的流信息
         q_param = request.args.get('q', '').lower()
@@ -99,17 +107,11 @@ def get_video_info():
         # 获取视频信息
         playinfo = get_playinfo_from_bilibili(url, cookies)
         if not playinfo:
-            return jsonify({
-                'success': False,
-                'error': '获取视频信息失败，请检查URL或cookie'
-            }), 400
+            return Response('错误: 获取视频信息失败，请检查URL或cookie', mimetype='text/plain; charset=utf-8', status=400)
         
         video_info = extract_video_info(playinfo, url, cookies)
         if not video_info:
-            return jsonify({
-                'success': False,
-                'error': '解析视频信息失败'
-            }), 400
+            return Response('错误: 解析视频信息失败', mimetype='text/plain; charset=utf-8', status=400)
         
         # 根据q参数决定返回的流信息
         if q_param == 'auto':
@@ -185,43 +187,54 @@ def get_video_info():
             highest_audio = dict(highest_audio)
             highest_audio['quality_name'] = get_audio_quality_name(highest_audio.get('quality', 0))
         
-        # 格式化返回数据（使用OrderedDict确保字段顺序）
-        result = OrderedDict([
-            ('success', True),
-            ('title', video_info.get('title', '')),
-            ('cover', video_info.get('cover', '')),
-            ('data', OrderedDict([
-                ('duration', video_info.get('duration', 0)),
-                ('highest_quality', OrderedDict([
-                    ('video', highest_video),
-                    ('audio', highest_audio)
-                ])),
-                ('video_streams', video_streams),
-                ('audio_streams', audio_streams)
-            ]))
-        ])
+        # 构建文本格式返回数据
+        # 将封面URL转换为https
+        cover_url = video_info.get('cover', '无')
+        if cover_url != '无' and cover_url.startswith('http://'):
+            cover_url = cover_url.replace('http://', 'https://')
         
-        # 使用json.dumps确保字段顺序
-        json_str = json.dumps(result, ensure_ascii=False, indent=2)
-        return Response(json_str, mimetype='application/json')
+        text_result = f"""视频信息获取成功
+
+基本信息:
+  标题: {video_info.get('title', '未知')}
+  封面: {cover_url}
+  时长: {video_info.get('duration', 0)} 秒
+  视频URL: {url}
+
+最高质量流:
+  视频: {get_quality_name(highest_video.get('quality', 0)) if highest_video else '无'} ({highest_video.get('width', 0)}x{highest_video.get('height', 0)} @ {highest_video.get('frameRate', 0)}fps)
+  音频: {get_audio_quality_name(highest_audio.get('quality', 0)) if highest_audio else '无'}
+
+可用视频流 ({len(video_streams)} 个):"""
+        
+        for i, stream in enumerate(video_streams, 1):
+            text_result += f"\n  {i}. {stream['quality_name']} - {stream['width']}x{stream['height']} @ {stream['frame_rate']}fps"
+            text_result += f" (编码: {stream['codecs']}, 带宽: {stream['bandwidth']})"
+            if q_param == 'auto' and stream.get('url'):
+                text_result += f"\n     URL: {stream['url']}"
+        
+        text_result += f"\n\n可用音频流 ({len(audio_streams)} 个):"
+        for i, stream in enumerate(audio_streams, 1):
+            text_result += f"\n  {i}. {stream['quality_name']} (编码: {stream['codecs']}, 带宽: {stream['bandwidth']})"
+            if q_param == 'auto' and stream.get('url'):
+                text_result += f"\n     URL: {stream['url']}"
+        
+        if q_param != 'auto':
+            text_result += "\n\n提示: 使用 &q=auto 参数可获取完整流地址信息"
+        
+        return Response(text_result, mimetype='text/plain; charset=utf-8')
         
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'服务器错误: {str(e)}'
-        }), 500
+        return Response(f'服务器错误: {str(e)}', mimetype='text/plain; charset=utf-8', status=500)
 
 
 @app.route('/api/video/quality', methods=['GET'])
 def get_video_quality():
-    """获取视频质量选项API"""
+    """获取视频质量选项API（文本格式输出）"""
     try:
         url = request.args.get('url')
         if not url:
-            return jsonify({
-                'success': False,
-                'error': '缺少必要参数: url'
-            }), 400
+            return Response('错误: 缺少必要参数 url\n', mimetype='text/plain; charset=utf-8'), 400
         
         cookies_param = request.args.get('cookies')
         cookies = cookies_param if cookies_param else load_cookies()
@@ -229,43 +242,74 @@ def get_video_quality():
         # 获取视频质量选项
         quality_options = get_video_quality_options(url, cookies)
         if not quality_options:
-            return jsonify({
-                'success': False,
-                'error': '获取视频质量选项失败，请检查URL或cookie'
-            }), 400
+            return Response('错误: 获取视频质量选项失败，请检查URL或cookie\n', mimetype='text/plain; charset=utf-8'), 400
         
-        return jsonify({
-            'success': True,
-            'data': quality_options
-        })
+        # 构建文本输出
+        output_lines = []
+        output_lines.append('=== B站视频质量选项 ===')
+        output_lines.append(f'视频URL: {url}')
+        output_lines.append(f'视频时长: {quality_options.get("duration", 0)} 秒')
+        output_lines.append('')
+        
+        # 输出视频质量选项
+        output_lines.append('=== 可用视频质量(video_quality_index) ===')
+        video_options = quality_options.get('video_options', [])
+        if video_options:
+            for option in video_options:
+                output_lines.append(f'[{option["index"]}] {option["quality_name"]} (ID: {option["quality_id"]})')
+                output_lines.append(f'    分辨率: {option["width"]}x{option["height"]}')
+                output_lines.append(f'    帧率: {option["frame_rate"]} fps')
+                output_lines.append(f'    带宽: {option["bandwidth"]} bps')
+                output_lines.append(f'    编码: {option["codecs"]}')
+                output_lines.append('')
+        else:
+            output_lines.append('未找到可用的视频质量选项')
+            output_lines.append('')
+        
+        # 输出音频质量选项
+        output_lines.append('=== 可用音频质量(audio_quality_index) ===')
+        audio_options = quality_options.get('audio_options', [])
+        if audio_options:
+            for option in audio_options:
+                output_lines.append(f'[{option["index"]}] {option["quality_name"]} (ID: {option["quality_id"]})')
+                output_lines.append(f'    带宽: {option["bandwidth"]} bps')
+                output_lines.append(f'    编码: {option["codecs"]}')
+                output_lines.append('')
+        else:
+            output_lines.append('未找到可用的音频质量选项')
+            output_lines.append('')
+        
+        output_lines.append('=== 使用说明 ===')
+        output_lines.append('下载时可使用 video_quality_index 和 audio_quality_index 参数选择对应的质量选项')
+        output_lines.append('例如: /api/video/download?url=...&video_quality_index=0&audio_quality_index=0')
+        
+        # 返回文本响应
+        text_output = '\n'.join(output_lines)
+        return Response(text_output, mimetype='text/plain; charset=utf-8')
         
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'服务器错误: {str(e)}'
-        }), 500
+        return Response(f'服务器错误: {str(e)}\n', mimetype='text/plain; charset=utf-8'), 500
 
 
 @app.route('/api/video/download', methods=['GET'])
 def download_video():
-    """下载视频API"""
+    """下载视频API - 返回文本格式"""
     try:
         url = request.args.get('url')
         if not url:
-            return jsonify({
-                'success': False,
-                'error': '缺少必要参数: url'
-            }), 400
+            return Response('错误: 缺少必要参数 url', mimetype='text/plain; charset=utf-8', status=400)
         
         # 检查是否已存在相同URL的下载任务
         for existing_task_id, task_info in download_tasks.items():
             if task_info['url'] == url and task_info['status'] in ['pending', 'downloading', 'completed']:
-                return jsonify({
-                    'success': False,
-                    'error': '当前解析已经存在，请勿重复请求',
-                    'existing_task_id': existing_task_id,
-                    'existing_status': task_info['status']
-                }), 409
+                text_result = f"""下载任务创建失败
+
+错误: 当前解析已经存在，请勿重复请求
+已存在任务ID: {existing_task_id}
+任务状态: {task_info['status']}
+
+请使用已存在的任务ID查询状态或下载文件。"""
+                return Response(text_result, mimetype='text/plain; charset=utf-8', status=409)
         
         cookies_param = request.args.get('cookies')
         cookies = cookies_param if cookies_param else load_cookies()
@@ -297,17 +341,28 @@ def download_video():
         thread.daemon = True
         thread.start()
         
-        return jsonify({
-            'success': True,
-            'task_id': task_id,
-            'message': '下载任务已启动'
-        })
+        text_result = f"""下载任务创建成功
+
+任务ID: {task_id}
+视频URL: {url}
+合并模式: {'是' if merge else '否'}
+视频质量索引: {video_quality_index}
+音频质量索引: {audio_quality_index}
+自定义文件名: {filename if filename else '使用默认名称'}
+创建时间: {download_tasks[task_id]['created_at']}
+
+状态: 下载任务已启动，正在后台处理
+
+使用以下接口查询进度:
+  GET /api/download/status/{task_id}
+
+下载完成后使用以下接口获取文件:
+  GET /api/download/file/{task_id}"""
+        
+        return Response(text_result, mimetype='text/plain; charset=utf-8')
         
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'服务器错误: {str(e)}'
-        }), 500
+        return Response(f'服务器错误: {str(e)}', mimetype='text/plain; charset=utf-8', status=500)
 
 def download_video_task(task_id, url, cookies, merge, filename, video_quality_index=0, audio_quality_index=0):
     """下载视频的后台任务"""
@@ -336,6 +391,7 @@ def download_video_task(task_id, url, cookies, merge, filename, video_quality_in
             merge, 
             video_quality_index, 
             audio_quality_index, 
+            filename,
             progress_callback
         )
         
@@ -357,25 +413,44 @@ def download_video_task(task_id, url, cookies, merge, filename, video_quality_in
 
 @app.route('/api/download/status/<task_id>', methods=['GET'])
 def get_download_status(task_id):
-    """查询下载状态API"""
+    """查询下载状态API - 返回文本格式"""
     if task_id not in download_tasks:
-        return jsonify({
-            'success': False,
-            'error': '任务不存在'
-        }), 404
+        return Response('错误: 任务不存在', mimetype='text/plain; charset=utf-8', status=404)
     
     task = download_tasks[task_id]
-    return jsonify({
-        'success': True,
-        'data': {
-            'task_id': task_id,
-            'status': task['status'],
-            'progress': task['progress'],
-            'message': task['message'],
-            'created_at': task['created_at'],
-            'error': task.get('error')
-        }
-    })
+    
+    # 根据状态显示不同的状态图标
+    status_icons = {
+        'pending': '⏳',
+        'downloading': '⬇️',
+        'completed': '✅',
+        'failed': '❌'
+    }
+    
+    status_icon = status_icons.get(task['status'], '❓')
+    
+    text_result = f"""下载任务状态查询
+
+任务ID: {task_id}
+状态: {status_icon} {task['status'].upper()}
+进度: {task['progress']}%
+消息: {task['message']}
+创建时间: {task['created_at']}"""
+    
+    if task.get('error'):
+        text_result += f"\n错误信息: {task['error']}"
+    
+    if task['status'] == 'completed' and task.get('file_path'):
+        text_result += f"\n\n文件已准备就绪，可以下载:"
+        text_result += f"\n  GET /api/download/file/{task_id}"
+    elif task['status'] == 'downloading':
+        text_result += f"\n\n正在下载中，请稍后再次查询状态"
+    elif task['status'] == 'failed':
+        text_result += f"\n\n下载失败，请检查错误信息或重新创建下载任务"
+    elif task['status'] == 'pending':
+        text_result += f"\n\n任务等待中，即将开始下载"
+    
+    return Response(text_result, mimetype='text/plain; charset=utf-8')
 
 @app.route('/api/download/file/<task_id>', methods=['GET'])
 def download_file(task_id):
@@ -576,36 +651,86 @@ def download_merged_file(task_id):
 
 @app.route('/api/tasks', methods=['GET'])
 def get_all_tasks():
-    """获取所有任务列表API"""
-    tasks = []
-    for task_id, task in download_tasks.items():
-        tasks.append({
-            'task_id': task_id,
-            'status': task['status'],
-            'progress': task['progress'],
-            'message': task['message'],
-            'created_at': task['created_at'],
-            'url': task['url']
-        })
+    """获取所有任务列表API - 返回文本格式"""
+    if not download_tasks:
+        return Response('当前没有任何下载任务', mimetype='text/plain; charset=utf-8')
     
-    return jsonify({
-        'success': True,
-        'data': tasks
-    })
+    # 状态图标映射
+    status_icons = {
+        'pending': '⏳',
+        'downloading': '⬇️',
+        'completed': '✅',
+        'failed': '❌'
+    }
+    
+    text_result = f"下载任务列表 (共 {len(download_tasks)} 个任务)\n\n"
+    
+    # 按创建时间排序任务
+    sorted_tasks = sorted(download_tasks.items(), key=lambda x: x[1]['created_at'], reverse=True)
+    
+    for i, (task_id, task) in enumerate(sorted_tasks, 1):
+        status_icon = status_icons.get(task['status'], '❓')
+        
+        text_result += f"{i}. 任务ID: {task_id}\n"
+        text_result += f"   状态: {status_icon} {task['status'].upper()}\n"
+        text_result += f"   进度: {task['progress']}%\n"
+        text_result += f"   消息: {task['message']}\n"
+        # created_at 是 ISO 格式字符串，需要解析后格式化
+        try:
+            created_time = datetime.fromisoformat(task['created_at'].replace('T', ' ').split('.')[0])
+            formatted_time = created_time.strftime('%Y-%m-%d %H:%M:%S')
+        except:
+            formatted_time = task['created_at']  # 如果解析失败，直接使用原字符串
+        text_result += f"   创建时间: {formatted_time}\n"
+        text_result += f"   视频URL: {task['url']}\n"
+        
+        if task.get('error'):
+            text_result += f"   错误: {task['error']}\n"
+        
+        if task['status'] == 'completed':
+            text_result += f"   下载链接: GET /api/download/file/{task_id}\n"
+        
+        text_result += "\n" + "-" * 60 + "\n\n"
+    
+    text_result += "使用说明:\n"
+    text_result += "- 查询单个任务状态: GET /api/download/status/<task_id>\n"
+    text_result += "- 下载已完成文件: GET /api/download/file/<task_id>\n"
+    text_result += "- 创建新下载任务: GET /api/video/download?url=<video_url>"
+    
+    return Response(text_result, mimetype='text/plain; charset=utf-8')
 
 @app.errorhandler(404)
 def not_found(error):
-    return jsonify({
-        'success': False,
-        'error': '接口不存在'
-    }), 404
+    text_result = """❌ 404 - 接口不存在
+
+请求的接口路径不存在，请检查URL是否正确。
+
+可用接口列表:
+  GET  /                           - 获取API信息
+  GET  /api/video/info             - 获取视频信息
+  GET  /api/video/quality          - 获取视频质量选项
+  GET  /api/video/download         - 下载视频
+  GET  /api/download/status/<id>   - 查询下载状态
+  GET  /api/download/file/<id>     - 下载文件
+  GET  /api/download/merge/<id>    - 合并下载视频音频
+  GET  /api/tasks                  - 获取所有任务
+
+如需帮助，请访问首页获取详细API文档。"""
+    return Response(text_result, mimetype='text/plain; charset=utf-8', status=404)
 
 @app.errorhandler(500)
 def internal_error(error):
-    return jsonify({
-        'success': False,
-        'error': '服务器内部错误'
-    }), 500
+    text_result = """❌ 500 - 服务器内部错误
+
+服务器在处理请求时发生了内部错误。
+
+可能的原因:
+- 服务器配置问题
+- 依赖服务不可用
+- 代码执行异常
+
+请稍后重试，如果问题持续存在，请联系管理员。"""
+    return Response(text_result, mimetype='text/plain; charset=utf-8', status=500)
 
 if __name__ == '__main__':
     print("B站视频下载API服务启动中...")

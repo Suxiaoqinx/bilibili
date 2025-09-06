@@ -13,6 +13,7 @@
 - 🌐 RESTful API接口设计
 - ⚡ 异步下载任务处理
 - 🎯 支持 `&q=auto` 参数获取全部视频和音频流
+- 📝 **纯文本响应格式**，易于阅读和处理
 
 ## 技术栈
 
@@ -70,6 +71,8 @@
 
 **基础URL**: `http://localhost:5000`
 
+**响应格式**: 所有API接口均返回纯文本格式 (`text/plain; charset=utf-8`)，便于浏览器直接查看和命令行工具处理。
+
 ### 接口列表
 
 #### 1. 获取API信息
@@ -79,19 +82,23 @@
 **描述**: 获取API基本信息和可用接口列表
 
 **响应示例**:
-```json
-{
-  "message": "B站视频下载API服务",
-  "version": "1.0.0",
-  "endpoints": {
-    "GET /": "获取API信息",
-    "GET /api/video/info": "获取视频信息 (支持 &q=auto 参数获取全部视频和音频流)",
-    "GET /api/video/quality": "获取视频质量选项",
-    "GET /api/video/download": "下载视频",
-    "GET /api/download/status/<task_id>": "查询下载状态",
-    "GET /api/download/file/<task_id>": "下载文件"
-  }
-}
+```
+=== B站视频下载API服务 ===
+版本: 2.0.0
+
+可用接口:
+• GET / - 获取API信息
+• GET /api/video/info - 获取视频信息 (支持 &q=auto 参数获取全部视频和音频流)
+• GET /api/video/quality - 获取视频质量选项
+• GET /api/video/download - 下载视频
+• GET /api/download/status/<task_id> - 查询下载状态
+• GET /api/download/file/<task_id> - 下载文件
+• GET /api/tasks - 查看所有任务列表
+
+使用说明:
+- 所有接口返回纯文本格式，便于阅读
+- 支持跨域访问
+- 部分功能需要配置Cookie
 ```
 
 #### 2. 获取视频信息
@@ -108,54 +115,45 @@ GET /api/video/info?url=https://www.bilibili.com/video/BV1xx411c7mD
 GET /api/video/info?url=https://www.bilibili.com/video/BV1xx411c7mD&q=auto
 ```
 
-**响应示例**:
-```json
-{
-  "success": true,
-  "title": "视频标题",
-  "cover": "封面图片URL",
-  "data": {
-    "duration": 300,
-    "highest_quality": {
-      "video": {
-        "quality_id": 80,
-        "quality_name": "高清 1080P",
-        "width": 1920,
-        "height": 1080,
-        "bandwidth": 2000000,
-        "frame_rate": 30,
-        "codecs": "avc1.640028"
-      },
-      "audio": {
-        "quality_id": 30280,
-        "quality_name": "320K",
-        "bandwidth": 320000,
-        "codecs": "mp4a.40.2"
-      }
-    },
-    "video_streams": [
-      {
-        "quality_id": 80,
-        "quality_name": "高清 1080P",
-        "width": 1920,
-        "height": 1080,
-        "bandwidth": 2000000,
-        "frame_rate": 30,
-        "codecs": "avc1.640028",
-        "url": "流地址 (仅在q=auto时返回)"
-      }
-    ],
-    "audio_streams": [
-      {
-        "quality_id": 30280,
-        "quality_name": "320K",
-        "bandwidth": 320000,
-        "codecs": "mp4a.40.2",
-        "url": "流地址 (仅在q=auto时返回)"
-      }
-    ]
-  }
-}
+**响应示例** (基本信息):
+```
+=== 视频信息 ===
+标题: 【标题】视频标题
+封面: https://i0.hdslb.com/bfs/archive/cover.jpg
+时长: 5分00秒
+
+=== 最高质量 ===
+视频: 高清 1080P (1920x1080, 30fps)
+音频: 320K
+
+=== 可用视频流 ===
+1. 高清 1080P (1920x1080, 30fps) - 2000000 bps
+2. 高清 720P (1280x720, 30fps) - 1500000 bps
+
+=== 可用音频流 ===
+1. 320K - 320000 bps
+2. 128K - 128000 bps
+```
+
+**响应示例** (q=auto时包含完整流地址):
+```
+=== 视频信息 ===
+标题: 【标题】视频标题
+封面: https://i0.hdslb.com/bfs/archive/cover.jpg
+时长: 5分00秒
+
+=== 视频流详情 ===
+1. 高清 1080P (1920x1080, 30fps)
+   带宽: 2000000 bps
+   编码: avc1.640028
+   流地址: https://upos-sz-mirror08c.bilivideo.com/...
+
+=== 音频流详情 ===
+1. 320K
+   带宽: 320000 bps
+   编码: mp4a.40.2
+   流地址: https://upos-sz-mirror08c.bilivideo.com/...
+```
 ```
 
 #### 3. 获取视频质量选项
@@ -187,40 +185,92 @@ GET /api/video/download?url=https://www.bilibili.com/video/BV1xx411c7mD&merge=tr
 ```
 
 **成功响应**:
-```json
-{
-  "success": true,
-  "task_id": "uuid",
-  "message": "下载任务已启动"
-}
+```
+✅ 下载任务已启动
+任务ID: 12345678-1234-1234-1234-123456789abc
+状态: 已启动
+
+您可以通过以下链接查看下载状态:
+/api/download/status/12345678-1234-1234-1234-123456789abc
 ```
 
 **重复请求响应** (HTTP 409):
-```json
-{
-  "success": false,
-  "error": "当前解析已经存在，请勿重复请求",
-  "existing_task_id": "existing-uuid",
-  "existing_status": "downloading"
-}
+```
+⚠️ 下载任务冲突
+错误: 当前解析已经存在，请勿重复请求
+现有任务ID: existing-12345678-1234-1234-1234-123456789abc
+现有任务状态: 下载中
+
+请查看现有任务状态:
+/api/download/status/existing-12345678-1234-1234-1234-123456789abc
 ```
 
 #### 5. 查询下载状态
 
 **接口**: `GET /api/download/status/<task_id>`
 
-**响应示例**:
-```json
-{
-  "task_id": "uuid",
-  "status": "completed",
-  "progress": 100,
-  "message": "下载完成",
-  "file_path": "/path/to/file.mp4"
-}
+**响应示例** (下载完成):
+```
+📋 下载任务状态
+任务ID: 12345678-1234-1234-1234-123456789abc
+状态: ✅ 已完成
+进度: 100%
+消息: 下载完成
+文件路径: /downloads/视频标题.mp4
+
+下载文件链接:
+/api/download/file/12345678-1234-1234-1234-123456789abc
 ```
 
-#### 6. 下载文件
+**响应示例** (下载中):
+```
+📋 下载任务状态
+任务ID: 12345678-1234-1234-1234-123456789abc
+状态: ⏳ 下载中
+进度: 65%
+消息: 正在下载视频流...
+```
+
+**响应示例** (下载失败):
+```
+📋 下载任务状态
+任务ID: 12345678-1234-1234-1234-123456789abc
+状态: ❌ 失败
+进度: 0%
+消息: 网络连接超时
+```
+
+#### 6. 查看任务列表
+
+**接口**: `GET /api/tasks`
+
+**描述**: 查看所有下载任务的状态列表
+
+**响应示例**:
+```
+📋 下载任务列表
+
+🔄 进行中的任务:
+1. [⏳ 下载中] 视频标题1 (65%)
+   任务ID: 12345678-1234-1234-1234-123456789abc
+   
+🎯 已完成的任务:
+2. [✅ 已完成] 视频标题2
+   任务ID: 87654321-4321-4321-4321-cba987654321
+   文件: /downloads/视频标题2.mp4
+   
+❌ 失败的任务:
+3. [❌ 失败] 视频标题3
+   任务ID: abcdef12-3456-7890-abcd-ef1234567890
+   错误: 网络连接超时
+
+使用说明:
+- 点击任务ID可查看详细状态
+- 已完成的任务可直接下载文件
+- 总计: 3个任务 (1个进行中, 1个已完成, 1个失败)
+```
+
+#### 7. 下载文件
 
 **接口**: `GET /api/download/file/<task_id>`
 
@@ -232,41 +282,78 @@ GET /api/video/download?url=https://www.bilibili.com/video/BV1xx411c7mD&merge=tr
 
 ```python
 import requests
+import re
+
+# 获取API信息
+response = requests.get('http://localhost:5000/')
+print(response.text)
 
 # 获取视频基本信息
 response = requests.get('http://localhost:5000/api/video/info?url=https://www.bilibili.com/video/BV1xx411c7mD')
-print(response.json())
+print(response.text)
 
 # 获取视频完整流信息
 response = requests.get('http://localhost:5000/api/video/info?url=https://www.bilibili.com/video/BV1xx411c7mD&q=auto')
-print(response.json())
+print(response.text)
 
 # 下载视频
 response = requests.get('http://localhost:5000/api/video/download?url=https://www.bilibili.com/video/BV1xx411c7mD&merge=true&filename=my_video')
-task_id = response.json()['task_id']
+print(response.text)
 
-# 查询下载状态
-status_response = requests.get(f'http://localhost:5000/api/download/status/{task_id}')
-print(status_response.json())
+# 从响应文本中提取任务ID
+task_id_match = re.search(r'任务ID: ([a-f0-9-]+)', response.text)
+if task_id_match:
+    task_id = task_id_match.group(1)
+    
+    # 查询下载状态
+    status_response = requests.get(f'http://localhost:5000/api/download/status/{task_id}')
+    print(status_response.text)
+    
+    # 查看所有任务
+    tasks_response = requests.get('http://localhost:5000/api/tasks')
+    print(tasks_response.text)
 ```
 
 ### JavaScript示例
 
 ```javascript
+// 获取API信息
+fetch('http://localhost:5000/')
+  .then(response => response.text())
+  .then(data => console.log(data));
+
 // 获取视频信息
 fetch('http://localhost:5000/api/video/info?url=https://www.bilibili.com/video/BV1xx411c7mD')
-  .then(response => response.json())
+  .then(response => response.text())
   .then(data => console.log(data));
 
 // 获取完整流信息
 fetch('http://localhost:5000/api/video/info?url=https://www.bilibili.com/video/BV1xx411c7mD&q=auto')
-  .then(response => response.json())
+  .then(response => response.text())
   .then(data => console.log(data));
 
 // 下载视频
 fetch('http://localhost:5000/api/video/download?url=https://www.bilibili.com/video/BV1xx411c7mD&merge=true&filename=my_video')
-  .then(response => response.json())
-  .then(data => console.log(data));
+  .then(response => response.text())
+  .then(data => {
+    console.log(data);
+    
+    // 从响应文本中提取任务ID
+    const taskIdMatch = data.match(/任务ID: ([a-f0-9-]+)/);
+    if (taskIdMatch) {
+      const taskId = taskIdMatch[1];
+      
+      // 查询下载状态
+      fetch(`http://localhost:5000/api/download/status/${taskId}`)
+        .then(response => response.text())
+        .then(statusData => console.log(statusData));
+        
+      // 查看所有任务
+      fetch('http://localhost:5000/api/tasks')
+        .then(response => response.text())
+        .then(tasksData => console.log(tasksData));
+    }
+  });
 ```
 
 ## 质量映射表
@@ -328,6 +415,15 @@ bilibili/
 本项目仅供学习和研究使用，请遵守相关法律法规和平台使用条款。
 
 ## 更新日志
+
+### v2.0.0
+- 🔄 **重大变更**: 所有API接口响应格式从JSON改为纯文本格式
+- 📝 优化文本输出格式，添加状态图标和分类展示
+- 🌐 改进浏览器直接访问体验，无需JSON解析
+- 🛠️ 保持所有功能逻辑不变，仅改变输出格式
+- 📋 新增任务列表接口 `/api/tasks`
+- 🔧 优化错误处理器，提供更友好的文本错误信息
+- 🔒 修复封面URL协议转换，确保HTTPS安全访问
 
 ### v1.1.0
 - 新增 `&q=auto` 参数支持，可获取全部视频和音频流信息
