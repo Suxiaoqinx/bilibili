@@ -56,7 +56,7 @@
 
 4. **配置Cookie (可选)**
    
-   如需下载会员视频或高质量视频，请在项目根目录创建 `cookies.txt` 文件，并填入B站的Cookie信息。
+   请执行bililogin.py 然后扫码登录账号 会自动将生成的cookie提取到cookies.txt文件内
 
 5. **启动服务**
    ```bash
@@ -436,3 +436,4 @@ bilibili/
 - 视频下载和合并功能
 - 任务状态管理
 - RESTful API设计
+
