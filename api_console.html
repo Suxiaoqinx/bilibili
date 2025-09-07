@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BiliBili 视频下载器 - API 控制台 v2.1.0</title>
+    <link rel="icon" type="image/png" href="https://www.bilibili.com/favicon.ico" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #00a1d6;
+            --secondary-color: #fb7299;
+            --success-color: #52c41a;
+            --warning-color: #faad14;
+            --error-color: #ff4d4f;
+            --bg-dark: #0f1419;
+            --bg-card: #1e2328;
+            --bg-input: #2a2d32;
+            --text-primary: #ffffff;
+            --text-secondary: #8c9196;
+            --border-color: #3c4043;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+        
+        .console-container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            min-height: 100vh;
+        }
+        
+        .sidebar {
+            background: var(--bg-card);
+            border-right: 1px solid var(--border-color);
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .logo i {
+            font-size: 24px;
+            color: var(--primary-color);
+        }
+        
+        .logo h1 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .nav-section {
+            margin-bottom: 25px;
+        }
+        
+        .nav-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+        
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 4px;
+        }
+        
+        .nav-item:hover {
+            background: rgba(0, 161, 214, 0.1);
+        }
+        
+        .nav-item.active {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .nav-item i {
+            width: 16px;
+            font-size: 14px;
+        }
+        
+        .main-content {
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .header h2 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+        
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: var(--success-color);
+            color: white;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .api-panel {
+            background: var(--bg-card);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        
+        .panel-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .method-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .method-get {
+            background: var(--success-color);
+            color: white;
+        }
+        
+        .method-post {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .panel-body {
+            padding: 20px;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .form-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        
+        .form-field label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+        
+        .form-field input,
+        .form-field select {
+            padding: 10px 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        
+        .form-field input:focus,
+        .form-field select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #0086b3;
+        }
+        
+        .btn-secondary {
+            background: var(--bg-input);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--border-color);
+        }
+        
+        .response-container {
+            margin-top: 20px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+        
+        .response-header {
+            padding: 12px 16px;
+            background: var(--bg-input);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .response-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .status-success {
+            color: var(--success-color);
+        }
+        
+        .status-error {
+            color: var(--error-color);
+        }
+        
+        .status-loading {
+            color: var(--warning-color);
+        }
+        
+        .response-body {
+            padding: 16px;
+            background: var(--bg-dark);
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .task-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+        
+        .task-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .task-card:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+        }
+        
+        .task-id {
+            font-family: monospace;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        
+        .task-status {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .spinning {
+            animation: spin 1s linear infinite;
+        }
+        
+        @media (max-width: 768px) {
+            .console-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="console-container">
+        <div class="sidebar">
+            <div class="logo">
+                <i class="fab fa-bilibili"></i>
+                <h1>API 控制台</h1>
+            </div>
+            
+            <div class="nav-section">
+                <div class="nav-title">视频操作</div>
+                <div class="nav-item active" data-panel="video-info">
+                    <i class="fas fa-info-circle"></i>
+                    <span>视频信息</span>
+                </div>
+                <div class="nav-item" data-panel="video-quality">
+                    <i class="fas fa-cog"></i>
+                    <span>画质选项</span>
+                </div>
+
+                <div class="nav-item" data-panel="video-download">
+                    <i class="fas fa-download"></i>
+                    <span>下载视频</span>
+                </div>
+            </div>
+            
+            <div class="nav-section">
+                <div class="nav-title">任务管理</div>
+                <div class="nav-item" data-panel="task-status">
+                    <i class="fas fa-tasks"></i>
+                    <span>任务状态</span>
+                </div>
+                <div class="nav-item" data-panel="task-list">
+                    <i class="fas fa-list"></i>
+                    <span>所有任务</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="header">
+                <h2 id="panel-title">视频信息</h2>
+                <div class="status-badge">
+                    <i class="fas fa-circle"></i>
+                    <span>API 在线 v2.1.0 - 智能合并</span>
+                </div>
+            </div>
+            
+            <!-- Video Info Panel -->
+            <div id="video-info" class="api-panel">
+                <div class="panel-header">
+                    <span class="method-badge method-get">GET</span>
+                    <span>/api/video/info</span>
+                </div>
+                <div class="panel-body">
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label>视频链接</label>
+                            <input type="text" id="info-url" placeholder="https://www.bilibili.com/video/BV..." value="https://www.bilibili.com/video/BV1GN41177kS">
+                        </div>
+                        <div class="form-field">
+                            <label>画质参数</label>
+                            <select id="info-quality">
+                                <option value="">默认</option>
+                                <option value="auto">自动 (所有流)</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label>流类型</label>
+                            <select id="info-stream-type">
+                                <option value="all">全部</option>
+                                <option value="video">仅视频流</option>
+                                <option value="audio">仅音频流</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="executeRequest('info')">
+                            <i class="fas fa-play"></i>
+                            执行
+                        </button>
+                        <button class="btn btn-secondary" onclick="clearResponse('info')">
+                            <i class="fas fa-trash"></i>
+                            清除
+                        </button>
+                    </div>
+                    <div id="info-response" class="response-container hidden">
+                        <div class="response-header">
+                            <div class="response-status" id="info-status">
+                                <i class="fas fa-circle"></i>
+                                <span>就绪</span>
+                            </div>
+                            <button class="btn btn-secondary" onclick="copyResponse('info')">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                        <div class="response-body" id="info-body"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Video Quality Panel -->
+            <div id="video-quality" class="api-panel hidden">
+                <div class="panel-header">
+                    <span class="method-badge method-get">GET</span>
+                    <span>/api/video/quality</span>
+                </div>
+                <div class="panel-body">
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label>视频链接</label>
+                            <input type="text" id="quality-url" placeholder="https://www.bilibili.com/video/BV..." value="https://www.bilibili.com/video/BV1GN41177kS">
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="executeRequest('quality')">
+                            <i class="fas fa-play"></i>
+                            执行
+                        </button>
+                        <button class="btn btn-secondary" onclick="clearResponse('quality')">
+                            <i class="fas fa-trash"></i>
+                            清除
+                        </button>
+                    </div>
+                    <div id="quality-response" class="response-container hidden">
+                        <div class="response-header">
+                            <div class="response-status" id="quality-status">
+                                <i class="fas fa-circle"></i>
+                                <span>就绪</span>
+                            </div>
+                            <button class="btn btn-secondary" onclick="copyResponse('quality')">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                        <div class="response-body" id="quality-body"></div>
+                    </div>
+                </div>
+            </div>
+            
+
+            
+            <!-- Video Download Panel -->
+            <div id="video-download" class="api-panel hidden">
+                <div class="panel-header">
+                    <span class="method-badge method-post">POST</span>
+                    <span>/api/video/download</span>
+                </div>
+                <div class="panel-body">
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label>视频链接</label>
+                            <input type="text" id="download-url" placeholder="https://www.bilibili.com/video/BV..." value="https://www.bilibili.com/video/BV1GN41177kS">
+                        </div>
+                        <div class="form-field">
+                            <label>智能合并模式 🧠</label>
+                            <select id="download-merge">
+                                <option value="true">是 (智能合并: FFmpeg优先 → 原生备选)</option>
+                                <option value="false">否 (分离文件)</option>
+                            </select>
+                            <small style="color: var(--text-secondary); font-size: 11px; margin-top: 4px; display: block;">💡 系统会自动检测FFmpeg并选择最佳合并方案</small>
+                        </div>
+                        <div class="form-field">
+                            <label>自定义文件名</label>
+                            <input type="text" id="download-filename" placeholder="可选的自定义文件名">
+                        </div>
+                        <div class="form-field">
+                            <label>视频质量索引</label>
+                            <input type="number" id="download-video-quality" placeholder="默认0-最高质量" min="0" value="0">
+                        </div>
+                        <div class="form-field">
+                            <label>音频质量索引</label>
+                            <input type="number" id="download-audio-quality" placeholder="默认0-最高质量" min="0" value="0">
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="executeRequest('download')">
+                            <i class="fas fa-play"></i>
+                            执行
+                        </button>
+                        <button class="btn btn-secondary" onclick="clearResponse('download')">
+                            <i class="fas fa-trash"></i>
+                            清除
+                        </button>
+                    </div>
+                    <div id="download-response" class="response-container hidden">
+                        <div class="response-header">
+                            <div class="response-status" id="download-status">
+                                <i class="fas fa-circle"></i>
+                                <span>就绪</span>
+                            </div>
+                            <button class="btn btn-secondary" onclick="copyResponse('download')">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                        <div class="response-body" id="download-body"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Task Status Panel -->
+            <div id="task-status" class="api-panel hidden">
+                <div class="panel-header">
+                    <span class="method-badge method-get">GET</span>
+                    <span>/api/download/status/{task_id}</span>
+                </div>
+                <div class="panel-body">
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label>任务ID</label>
+                            <input type="text" id="status-taskid" placeholder="输入任务ID...">
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="executeRequest('status')">
+                            <i class="fas fa-play"></i>
+                            执行
+                        </button>
+                        <button class="btn btn-secondary" onclick="clearResponse('status')">
+                            <i class="fas fa-trash"></i>
+                            清除
+                        </button>
+                    </div>
+                    <div id="status-response" class="response-container hidden">
+                        <div class="response-header">
+                            <div class="response-status" id="status-status">
+                                <i class="fas fa-circle"></i>
+                                <span>就绪</span>
+                            </div>
+                            <button class="btn btn-secondary" onclick="copyResponse('status')">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                        <div class="response-body" id="status-body"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Task List Panel -->
+            <div id="task-list" class="api-panel hidden">
+                <div class="panel-header">
+                    <span class="method-badge method-get">GET</span>
+                    <span>/api/tasks</span>
+                </div>
+                <div class="panel-body">
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="executeRequest('tasks')">
+                            <i class="fas fa-play"></i>
+                            执行
+                        </button>
+                        <button class="btn btn-secondary" onclick="clearResponse('tasks')">
+                            <i class="fas fa-trash"></i>
+                            清除
+                        </button>
+                    </div>
+                    <div id="tasks-response" class="response-container hidden">
+                        <div class="response-header">
+                            <div class="response-status" id="tasks-status">
+                                <i class="fas fa-circle"></i>
+                                <span>就绪</span>
+                            </div>
+                            <button class="btn btn-secondary" onclick="copyResponse('tasks')">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                        <div class="response-body" id="tasks-body"></div>
+                    </div>
+                    <div id="task-grid" class="task-grid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE = window.location.origin;
+        
+        // Navigation
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const panel = item.dataset.panel;
+                switchPanel(panel);
+            });
+        });
+        
+        function switchPanel(panelId) {
+            // Update navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelector(`[data-panel="${panelId}"]`).classList.add('active');
+            
+            // Update panels
+            document.querySelectorAll('.api-panel').forEach(panel => {
+                panel.classList.add('hidden');
+            });
+            document.getElementById(panelId).classList.remove('hidden');
+            
+            // Update title
+            const titles = {
+                'video-info': '视频信息',
+                'video-quality': '画质选项',
+                'video-download': '下载视频',
+                'task-status': '任务状态',
+                'task-list': '所有任务'
+            };
+            document.getElementById('panel-title').textContent = titles[panelId];
+        }
+        
+        // API Requests
+        async function executeRequest(type) {
+            const responseEl = document.getElementById(`${type}-response`);
+            const statusEl = document.getElementById(`${type}-status`);
+            const bodyEl = document.getElementById(`${type}-body`);
+            
+            responseEl.classList.remove('hidden');
+            updateStatus(statusEl, 'loading', '执行中...');
+            
+            try {
+                let url;
+                
+                switch(type) {
+                    case 'info':
+                        const infoUrl = document.getElementById('info-url').value;
+                        const quality = document.getElementById('info-quality').value;
+                        const streamType = document.getElementById('info-stream-type').value;
+                        if (!infoUrl) {
+                            throw new Error('请输入视频链接');
+                        }
+                        url = `${API_BASE}/api/video/info?url=${encodeURIComponent(infoUrl)}${quality ? '&q=' + quality : ''}${streamType ? '&stream_type=' + streamType : ''}`;
+                        break;
+                        
+                    case 'quality':
+                        const qualityUrl = document.getElementById('quality-url').value;
+                        if (!qualityUrl) {
+                            throw new Error('请输入视频链接');
+                        }
+                        url = `${API_BASE}/api/video/quality?url=${encodeURIComponent(qualityUrl)}`;
+                        break;
+                        
+
+                        
+                    case 'download':
+                        const downloadUrl = document.getElementById('download-url').value;
+                        const merge = document.getElementById('download-merge').value;
+                        const filename = document.getElementById('download-filename').value;
+                        const videoQuality = document.getElementById('download-video-quality').value;
+                        const audioQuality = document.getElementById('download-audio-quality').value;
+                        if (!downloadUrl) {
+                            throw new Error('请输入视频链接');
+                        }
+                        url = `${API_BASE}/api/video/download?url=${encodeURIComponent(downloadUrl)}&merge=${merge}`;
+                        if (filename) {
+                            url += `&filename=${encodeURIComponent(filename)}`;
+                        }
+                        if (videoQuality) {
+                            url += `&video_quality=${videoQuality}`;
+                        }
+                        if (audioQuality) {
+                            url += `&audio_quality=${audioQuality}`;
+                        }
+                        break;
+                        
+                    case 'status':
+                        const taskId = document.getElementById('status-taskid').value;
+                        if (!taskId) {
+                            throw new Error('请输入任务ID');
+                        }
+                        url = `${API_BASE}/api/download/status/${encodeURIComponent(taskId)}`;
+                        break;
+                        
+                    case 'tasks':
+                        url = `${API_BASE}/api/tasks`;
+                        break;
+                }
+                
+                const response = await fetch(url);
+                const text = await response.text();
+                
+                if (response.ok) {
+                    updateStatus(statusEl, 'success', `${response.status} 成功`);
+                    
+                    // 格式化响应以突出显示智能合并信息
+                    if (type === 'download' || type === 'status') {
+                        try {
+                            const jsonData = JSON.parse(text);
+                            if (jsonData.merge_method) {
+                                const mergeInfo = `\n🧠 智能合并方法: ${jsonData.merge_method === 'ffmpeg' ? 'FFmpeg (推荐)' : '原生合并 (备选)'}`;
+                                bodyEl.textContent = JSON.stringify(jsonData, null, 2) + mergeInfo;
+                            } else {
+                                bodyEl.textContent = JSON.stringify(jsonData, null, 2);
+                            }
+                        } catch {
+                            bodyEl.textContent = text;
+                        }
+                    } else {
+                        bodyEl.textContent = text;
+                    }
+                    
+                    if (type === 'tasks') {
+                        renderTaskGrid(text);
+                    }
+                } else {
+                    updateStatus(statusEl, 'error', `${response.status} 错误`);
+                    bodyEl.textContent = text;
+                }
+            } catch (error) {
+                updateStatus(statusEl, 'error', '请求失败');
+                bodyEl.textContent = error.message;
+            }
+        }
+        
+        function updateStatus(statusEl, type, message) {
+            const icon = statusEl.querySelector('i');
+            const text = statusEl.querySelector('span');
+            
+            statusEl.className = `response-status status-${type}`;
+            text.textContent = message;
+            
+            if (type === 'loading') {
+                icon.className = 'fas fa-spinner spinning';
+            } else if (type === 'success') {
+                icon.className = 'fas fa-check-circle';
+            } else if (type === 'error') {
+                icon.className = 'fas fa-exclamation-circle';
+            }
+        }
+        
+        function clearResponse(type) {
+            const responseEl = document.getElementById(`${type}-response`);
+            const statusEl = document.getElementById(`${type}-status`);
+            const bodyEl = document.getElementById(`${type}-body`);
+            
+            responseEl.classList.add('hidden');
+            updateStatus(statusEl, '', '就绪');
+            statusEl.querySelector('i').className = 'fas fa-circle';
+            bodyEl.textContent = '';
+            
+            if (type === 'tasks') {
+                document.getElementById('task-grid').innerHTML = '';
+            }
+        }
+        
+        function copyResponse(type) {
+            const bodyEl = document.getElementById(`${type}-body`);
+            navigator.clipboard.writeText(bodyEl.textContent);
+            
+            // Show feedback
+            const btn = event.target.closest('button');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check"></i>';
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+            }, 1000);
+        }
+        
+        function renderTaskGrid(text) {
+            const taskGrid = document.getElementById('task-grid');
+            const taskIds = text.match(/任务ID: ([a-f0-9-]+)/g);
+            
+            if (taskIds && taskIds.length > 0) {
+                taskGrid.innerHTML = '';
+                
+                taskIds.forEach(match => {
+                    const taskId = match.replace('任务ID: ', '');
+                    const taskCard = document.createElement('div');
+                    taskCard.className = 'task-card';
+                    taskCard.innerHTML = `
+                        <div class="task-id">${taskId}</div>
+                        <div class="task-status" style="background: var(--primary-color); color: white;">活跃</div>
+                    `;
+                    taskCard.onclick = () => {
+                        document.getElementById('status-taskid').value = taskId;
+                        switchPanel('task-status');
+                        executeRequest('status');
+                    };
+                    taskGrid.appendChild(taskCard);
+                });
+            }
+        }
+        
+        // Auto-load tasks on page load
+        window.onload = function() {
+            switchPanel('task-list');
+            executeRequest('tasks');
+        };
+    </script>
+</body>
+</html>

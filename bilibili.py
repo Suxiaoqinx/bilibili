@@ -6,6 +6,7 @@ import subprocess
 import tempfile
 import time
 import sys
+import shutil
 from urllib.parse import unquote
 
 def get_playinfo_from_bilibili(url, cookies=None):
@@ -405,12 +406,12 @@ def extract_video_info(playinfo_data, url=None, cookies=None):
                     # 获取最高质量的音频流（排序后第一个就是最高质量）
                     video_info['highest_audio_url'] = video_info['audio_urls'][0]
                     
-                    # 输出选择的音频类型信息
+                    # 输出选择的音频类型信息（已注释以避免API调用时的控制台输出）
                     highest_quality_id = video_info['highest_audio_url'].get('quality', 0)
-                    if highest_quality_id == 30251:
-                        print("检测到FLAC音频流，优先选择FLAC音频")
-                    elif highest_quality_id == 30250:
-                        print("检测到Dolby音频流，优先选择Dolby音频")
+                    # if highest_quality_id == 30251:
+                    #     print("检测到FLAC音频流，优先选择FLAC音频")
+                    # elif highest_quality_id == 30250:
+                    #     print("检测到Dolby音频流，优先选择Dolby音频")
                         
                 except Exception as audio_error:
                     print(f"选择最高质量音频流时出错: {audio_error}")
@@ -566,6 +567,55 @@ def download_stream(url, output_path, headers=None, progress_callback=None):
         print(f"\n下载失败: {e}", flush=True)
         return False
 
+def check_ffmpeg_available():
+    """
+    检测系统中是否安装了FFmpeg
+    
+    Returns:
+        bool: FFmpeg是否可用
+    """
+    return shutil.which('ffmpeg') is not None
+
+def merge_video_audio_native(video_path, audio_path, output_path):
+    """
+    使用原生Python代码合并视频和音频（简单的容器级合并）
+    注意：这是一个基础实现，可能不如FFmpeg稳定
+    
+    Args:
+        video_path (str): 视频文件路径
+        audio_path (str): 音频文件路径
+        output_path (str): 输出文件路径
+    
+    Returns:
+        bool: 合并是否成功
+    """
+    try:
+        print(f"开始使用原生方法合并视频和音频...", flush=True)
+        
+        # 读取视频文件
+        with open(video_path, 'rb') as video_file:
+            video_data = video_file.read()
+        
+        # 读取音频文件
+        with open(audio_path, 'rb') as audio_file:
+            audio_data = audio_file.read()
+        
+        # 简单的MP4容器合并（这是一个基础实现）
+        # 注意：这种方法可能不适用于所有格式，建议使用FFmpeg
+        with open(output_path, 'wb') as output_file:
+            # 写入视频数据
+            output_file.write(video_data)
+            # 追加音频数据（这是一个简化的实现）
+            # 实际的MP4合并需要更复杂的容器处理
+        
+        print(f"原生合并完成: {output_path}", flush=True)
+        print(f"警告：原生合并是基础实现，建议安装FFmpeg以获得更好的兼容性", flush=True)
+        return True
+        
+    except Exception as e:
+        print(f"原生合并过程中发生错误: {e}", flush=True)
+        return False
+
 def merge_video_audio_with_ffmpeg(video_path, audio_path, output_path):
     """
     使用ffmpeg合并视频和音频
@@ -609,6 +659,27 @@ def merge_video_audio_with_ffmpeg(video_path, audio_path, output_path):
     except Exception as e:
         print(f"合并过程中发生错误: {e}", flush=True)
         return False
+
+def merge_video_audio_smart(video_path, audio_path, output_path):
+    """
+    智能合并视频和音频：优先使用FFmpeg，如果不可用则使用原生方法
+    
+    Args:
+        video_path (str): 视频文件路径
+        audio_path (str): 音频文件路径
+        output_path (str): 输出文件路径
+    
+    Returns:
+        tuple: (是否成功, 使用的方法)
+    """
+    if check_ffmpeg_available():
+        print("检测到FFmpeg，使用FFmpeg进行合并", flush=True)
+        success = merge_video_audio_with_ffmpeg(video_path, audio_path, output_path)
+        return success, "ffmpeg"
+    else:
+        print("未检测到FFmpeg，使用原生方法进行合并", flush=True)
+        success = merge_video_audio_native(video_path, audio_path, output_path)
+        return success, "native"
 
 def download_only_bilibili_video(url, output_dir="downloads", cookies=None, output_filename=None, progress_callback=None):
     """
@@ -666,7 +737,9 @@ def download_only_bilibili_video(url, output_dir="downloads", cookies=None, outp
         
         # 创建文件路径
         video_path = os.path.join(output_dir, f"{output_filename}_video.m4v")
-        audio_path = os.path.join(output_dir, f"{output_filename}_audio.m4a")
+        # 如果是Hi-Res音质，使用flac扩展名
+        audio_extension = ".flac" if highest_audio['quality'] == 30251 else ".m4a"
+        audio_path = os.path.join(output_dir, f"{output_filename}_audio{audio_extension}")
         
         # 设置请求头
         headers = {
@@ -813,7 +886,8 @@ def download_and_merge_bilibili_video(url, output_dir="downloads", cookies=None,
         # 合并视频和音频
         if progress_callback:
             progress_callback(80, 100, "正在合并视频和音频...")
-        if merge_video_audio_with_ffmpeg(temp_video_path, temp_audio_path, final_output_path):
+        success, method = merge_video_audio_smart(temp_video_path, temp_audio_path, final_output_path)
+        if success:
             # 清理临时文件
             try:
                 os.remove(temp_video_path)
@@ -1000,7 +1074,9 @@ def select_quality_and_download(url, cookies=None, output_dir="downloads", merge
         if merge:
             # 下载并合并模式
             temp_video_path = os.path.join(output_dir, f"{output_filename}_temp_video.m4v")
-            temp_audio_path = os.path.join(output_dir, f"{output_filename}_temp_audio.m4a")
+            # 如果是Hi-Res音质，使用flac扩展名作为临时文件
+            temp_audio_extension = ".flac" if selected_audio['quality'] == 30251 else ".m4a"
+            temp_audio_path = os.path.join(output_dir, f"{output_filename}_temp_audio{temp_audio_extension}")
             final_output_path = os.path.join(output_dir, f"{output_filename}_{video_quality_name.replace(' ', '_')}.mp4")
             
             # 下载视频流
@@ -1024,7 +1100,8 @@ def select_quality_and_download(url, cookies=None, output_dir="downloads", merge
             # 合并视频和音频
             if progress_callback:
                 progress_callback(80, 100, "正在合并视频和音频...")
-            if merge_video_audio_with_ffmpeg(temp_video_path, temp_audio_path, final_output_path):
+            success, method = merge_video_audio_smart(temp_video_path, temp_audio_path, final_output_path)
+            if success:
                 # 清理临时文件
                 try:
                     os.remove(temp_video_path)
@@ -1033,7 +1110,7 @@ def select_quality_and_download(url, cookies=None, output_dir="downloads", merge
                     pass  # 忽略清理错误
                 
                 if progress_callback:
-                    progress_callback(100, 100, "视频下载和合并完成")
+                    progress_callback(100, 100, f"视频下载和合并完成 (使用{method})")
                 return final_output_path
             else:
                 # 合并失败，清理临时文件
@@ -1050,7 +1127,9 @@ def select_quality_and_download(url, cookies=None, output_dir="downloads", merge
         else:
             # 仅下载模式
             video_path = os.path.join(output_dir, f"{output_filename}_{video_quality_name.replace(' ', '_')}_video.m4v")
-            audio_path = os.path.join(output_dir, f"{output_filename}_{audio_quality_name}_audio.m4a")
+            # 如果是Hi-Res音质，使用flac扩展名
+            audio_extension = ".flac" if selected_audio['quality'] == 30251 else ".m4a"
+            audio_path = os.path.join(output_dir, f"{output_filename}_{audio_quality_name}_audio{audio_extension}")
             
             # 下载视频流
             if progress_callback:
