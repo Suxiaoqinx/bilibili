@@ -576,46 +576,6 @@ def check_ffmpeg_available():
     """
     return shutil.which('ffmpeg') is not None
 
-def merge_video_audio_native(video_path, audio_path, output_path):
-    """
-    使用原生Python代码合并视频和音频（简单的容器级合并）
-    注意：这是一个基础实现，可能不如FFmpeg稳定
-    
-    Args:
-        video_path (str): 视频文件路径
-        audio_path (str): 音频文件路径
-        output_path (str): 输出文件路径
-    
-    Returns:
-        bool: 合并是否成功
-    """
-    try:
-        print(f"开始使用原生方法合并视频和音频...", flush=True)
-        
-        # 读取视频文件
-        with open(video_path, 'rb') as video_file:
-            video_data = video_file.read()
-        
-        # 读取音频文件
-        with open(audio_path, 'rb') as audio_file:
-            audio_data = audio_file.read()
-        
-        # 简单的MP4容器合并（这是一个基础实现）
-        # 注意：这种方法可能不适用于所有格式，建议使用FFmpeg
-        with open(output_path, 'wb') as output_file:
-            # 写入视频数据
-            output_file.write(video_data)
-            # 追加音频数据（这是一个简化的实现）
-            # 实际的MP4合并需要更复杂的容器处理
-        
-        print(f"原生合并完成: {output_path}", flush=True)
-        print(f"警告：原生合并是基础实现，建议安装FFmpeg以获得更好的兼容性", flush=True)
-        return True
-        
-    except Exception as e:
-        print(f"原生合并过程中发生错误: {e}", flush=True)
-        return False
-
 def merge_video_audio_with_ffmpeg(video_path, audio_path, output_path):
     """
     使用ffmpeg合并视频和音频
@@ -662,7 +622,7 @@ def merge_video_audio_with_ffmpeg(video_path, audio_path, output_path):
 
 def merge_video_audio_smart(video_path, audio_path, output_path):
     """
-    智能合并视频和音频：优先使用FFmpeg，如果不可用则使用原生方法
+    使用FFmpeg合并视频和音频
     
     Args:
         video_path (str): 视频文件路径
@@ -677,9 +637,8 @@ def merge_video_audio_smart(video_path, audio_path, output_path):
         success = merge_video_audio_with_ffmpeg(video_path, audio_path, output_path)
         return success, "ffmpeg"
     else:
-        print("未检测到FFmpeg，使用原生方法进行合并", flush=True)
-        success = merge_video_audio_native(video_path, audio_path, output_path)
-        return success, "native"
+        print("错误：未检测到FFmpeg，无法进行视频合并！请安装FFmpeg并添加到系统PATH中。", flush=True)
+        return False, "error"
 
 def download_only_bilibili_video(url, output_dir="downloads", cookies=None, output_filename=None, progress_callback=None):
     """

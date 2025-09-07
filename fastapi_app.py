@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks, Query
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os
+import sys
 import tempfile
 import threading
 import uuid
@@ -23,7 +24,8 @@ from bilibili import (
     select_quality_and_download,
     get_video_title_and_cover,
     get_quality_name,
-    get_audio_quality_name
+    get_audio_quality_name,
+    check_ffmpeg_available
 )
 
 app = FastAPI(
@@ -99,6 +101,37 @@ task_lock = threading.Lock()
 
 # 确保下载目录存在
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+
+# 检查FFmpeg是否可用
+def check_ffmpeg_on_startup():
+    """在应用启动时检查FFmpeg是否可用"""
+    if not check_ffmpeg_available():
+        print("\n❌ 错误：未检测到FFmpeg！")
+        print("📋 FFmpeg是视频合并的必需工具，请按以下步骤安装：")
+        print("\n🔧 Windows安装方法：")
+        print("   1. 访问 https://ffmpeg.org/download.html")
+        print("   2. 下载Windows版本的FFmpeg")
+        print("   3. 解压到任意目录（如 C:\\ffmpeg）")
+        print("   4. 将FFmpeg的bin目录添加到系统PATH环境变量中")
+        print("   5. 重启命令行或IDE，重新运行程序")
+        print("\n🔧 Windows包管理器安装：")
+        print("   - 使用Chocolatey: choco install ffmpeg")
+        print("   - 使用Scoop: scoop install ffmpeg")
+        print("\n🐧 Linux安装方法：")
+        print("   - Ubuntu/Debian: sudo apt update && sudo apt install ffmpeg")
+        print("   - CentOS/RHEL: sudo yum install ffmpeg 或 sudo dnf install ffmpeg")
+        print("   - Arch Linux: sudo pacman -S ffmpeg")
+        print("   - Fedora: sudo dnf install ffmpeg")
+        print("\n🍎 macOS安装方法：")
+        print("   - 使用Homebrew: brew install ffmpeg")
+        print("   - 使用MacPorts: sudo port install ffmpeg")
+        print("\n⚠️  应用将停止运行，请安装FFmpeg后重试。")
+        sys.exit(1)
+    else:
+        print("✅ FFmpeg检测成功，应用正常启动")
+
+# 在应用启动时检查FFmpeg
+check_ffmpeg_on_startup()
 
 def safe_delete_file(file_path, max_retries=3, delay=1):
     """安全删除文件，包含重试机制"""
