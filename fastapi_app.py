@@ -51,7 +51,7 @@ app = FastAPI(
 - 支持自动合并视频音频文件
 - 下载的文件保存在 `downloads` 目录
     """,
-    version="2.0.0",
+    version="2.1.0",
     docs_url=None,
     redoc_url=None,
     openapi_tags=[
@@ -875,4 +875,5 @@ if __name__ == "__main__":
     print("  GET  /api/tasks                  - 获取所有任务")
     print("\n服务器将在 http://localhost:8000 启动")
     
+
     uvicorn.run(app, host="0.0.0.0", port=8000)
